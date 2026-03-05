@@ -14,7 +14,11 @@ st.set_page_config(page_title="Fraud Detection Pipeline", layout="wide")
 # --- LOAD DATA & MODELS ---
 @st.cache_data
 def load_sample_data():
-    return pd.read_csv('data/creditcard.csv')
+    # Streamlit Cloud needs the compressed zip version to bypass GitHub's 100MB limit
+    try:
+        return pd.read_csv('data/creditcard.zip')
+    except FileNotFoundError:
+        return pd.read_csv('data/creditcard.csv')
 
 @st.cache_data
 def compute_correlations(df):
