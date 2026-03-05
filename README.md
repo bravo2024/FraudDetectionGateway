@@ -1,36 +1,38 @@
-# 🛡️ Enterprise Fraud Detection Gateway
+# Credit Card Fraud Detection Pipeline
 
-**Architected by Vivek (@bravo2024)**
+A machine learning pipeline for detecting fraudulent credit card transactions, addressing extreme class imbalance and evaluating model performance in terms of financial ROI.
 
-An end-to-end Machine Learning pipeline designed to evaluate highly imbalanced credit card transactions in real-time. This project moves beyond simple predictive modeling to incorporate **Enterprise MLOps** and **Business Logic Tuning**, simulating a true banking environment.
+## Overview
+This repository contains a comprehensive experiment utilizing the Kaggle European Credit Card Fraud dataset. The project demonstrates the end-to-end ML workflow: data preprocessing, dealing with imbalanced datasets using SMOTE, training multiple classifier architectures, and evaluating them on business-critical metrics.
 
-## 🚀 Live Application
-View the interactive dashboard here: **[Link to your deployed Streamlit app]**
+## Features
+- **Imbalance Handling:** Implemented SMOTE (Synthetic Minority Over-sampling Technique) to balance the 0.17% fraud rate during model training.
+- **Model Benchmarking:** Head-to-head comparison of Logistic Regression, Decision Trees, Random Forest, and XGBoost.
+- **Interpretability:** Feature importance extraction for ensemble models to understand PCA component weighting.
+- **ROI Simulation:** Real-world financial impact calculations based on False Negatives (actual money lost) vs. True Positives (money saved).
+- **Interactive Dashboard:** A Streamlit application for visualizing the EDA, ROC-AUC curves, and interactive batch inference.
 
-## 🧠 Core Engineering Architecture
+## Technical Stack
+- `scikit-learn`: Data splitting, Logistic Regression, Decision Trees, Random Forest, and metric evaluation.
+- `xgboost`: Gradient boosting for state-of-the-art tabular classification.
+- `imbalanced-learn`: SMOTE implementation.
+- `pandas` / `numpy`: Data manipulation.
+- `streamlit` / `plotly`: Interactive UI and data visualization.
 
-### 1. The Imbalance Problem (SMOTE)
-Real-world fraud is extremely rare (0.17% in this dataset). Naive models simply learn to predict "Legitimate" 100% of the time to achieve high accuracy. 
-*   **My Solution:** I engineered a preprocessing pipeline utilizing **SMOTE** (Synthetic Minority Over-sampling Technique) to mathematically generate synthetic fraudulent vectors during training. This forces the algorithms to establish a proper decision boundary.
+## Running Locally
 
-### 2. Multi-Algorithm Benchmarking
-I trained and benchmarked three distinct architectures:
-*   **Logistic Regression:** Fast, interpretable baseline.
-*   **Decision Tree:** Rule-based logic capable of capturing non-linear relationships.
-*   **Random Forest:** An ensemble method that provided the most robust resistance to overfitting.
-*   *Note: In this domain, I optimized for **Recall** over Accuracy, as the business cost of missing fraud (False Negative) is exponentially higher than a false alarm.*
+1. Clone the repository and install dependencies:
+   ```bash
+   pip install -r requirements.txt
+   ```
+2. Place the Kaggle dataset (`creditcard.csv`) inside the `data/` directory.
+3. Run the training script to generate the models:
+   ```bash
+   python ml/train_multiple.py
+   ```
+4. Start the Streamlit application:
+   ```bash
+   streamlit run app.py
+   ```
 
-### 3. Dynamic Business Threshold Tuning
-AI does not output binary "Yes/No" answers; it outputs probabilities. The dashboard includes an interactive **Decision Threshold Slider**.
-*   This demonstrates my understanding of the **Precision-Recall Tradeoff**. 
-*   Users can manipulate the threshold to see exactly how moving the slider impacts "Customer Friction" (blocking innocent people) versus "Business Risk" (letting thieves through).
-
-## 🛠️ Tech Stack
-*   **Language:** Python 3
-*   **Machine Learning:** Scikit-Learn, Imbalanced-Learn (SMOTE)
-*   **Data Processing:** Pandas, NumPy
-*   **Visualization:** Streamlit, Plotly
-*   **Data Security:** PCA (Principal Component Analysis) to ensure GDPR/banking compliance.
-
----
-*Developed as a portfolio piece to demonstrate applied Machine Learning Engineering.*
+*Author: Vivek*

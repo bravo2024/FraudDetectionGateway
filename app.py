@@ -9,7 +9,7 @@ from sklearn.model_selection import train_test_split
 from sklearn.metrics import roc_curve, auc, confusion_matrix
 
 # --- PAGE CONFIG ---
-st.set_page_config(page_title="Fraud Detection AI Pipeline", page_icon="🎓", layout="wide")
+st.set_page_config(page_title="Fraud Detection Pipeline", layout="wide")
 
 # --- LOAD DATA & MODELS ---
 @st.cache_data
@@ -66,64 +66,65 @@ roc_data, X_train_raw, y_test_true = generate_evaluation_data(df_full, scaler, f
 batch_df = get_batch_data(df_full)
 
 # --- UI HEADER ---
-st.title("🎓 Comprehensive Experiment on Fraud Detection")
+st.title("Credit Card Fraud Detection Pipeline")
 st.markdown("""
-*An academic and technical demonstration engineered by Vivek (@bravo2024).*  
-*Utilizing the Kaggle European Credit Card Dataset to showcase model evolution, financial ROI, and feature interpretability.*
+**Author:** Vivek (GitHub: bravo2024)  
+An evaluation of various machine learning models for detecting fraudulent transactions in highly imbalanced datasets, featuring ROI analysis and feature interpretability.
 """)
 
 # --- TABS ---
 tab1, tab2, tab3, tab4 = st.tabs([
-    "📊 Data & Mathematics", 
-    "🧠 Model Evolution (Inc. XGBoost)", 
-    "🔍 Feature Importance",
-    "💵 Business Impact (ROI & Errors)"
+    "Dataset & Preprocessing", 
+    "Model Benchmarks", 
+    "Feature Interpretability",
+    "Financial Impact Analysis"
 ])
 
 # ==========================================
 # TAB 1: DATA & MATHEMATICS
 # ==========================================
 with tab1:
-    st.header("1. The Dataset: Origin & Context")
-    st.write("**Source:** The official European Credit Card Fraud dataset (Kaggle).")
-    st.write("**Volume:** 284,807 total transactions.")
-    st.write("**The Problem:** We are looking for **492** fraudulent transactions hidden among **284,315** legitimate ones (0.17% fraud rate).")
+    st.header("Dataset Context")
+    st.write("This project utilizes the European Credit Card Fraud dataset from Kaggle.")
+    st.write("- **Total records:** 284,807 transactions")
+    st.write("- **Class distribution:** 492 frauds, 284,315 legitimate (0.17% fraud rate)")
     
     st.markdown("---")
     col_math1, col_math2 = st.columns(2)
     with col_math1:
-        st.subheader("Data Privacy via PCA")
-        st.write("Banks use Principal Component Analysis (PCA) to hide user identities (like location, IP, merchant) while preserving mathematical variance.")
+        st.subheader("Feature Anonymization (PCA)")
+        st.write("Due to banking privacy regulations, the original features were transformed using Principal Component Analysis (PCA). The resulting dataset consists of numerical principal components (V1-V28), alongside the original 'Time' and 'Amount'.")
         st.latex(r"Z = XW")
     with col_math2:
-        st.subheader("Solving Imbalance via SMOTE")
-        st.write("To prevent the AI from defaulting to 'Legitimate', I used SMOTE to algorithmically generate synthetic fraud vectors during training.")
+        st.subheader("Handling Imbalance (SMOTE)")
+        st.write("To address the extreme class imbalance (0.17%), the training set was augmented using Synthetic Minority Over-sampling Technique (SMOTE). This generates synthetic examples of the minority class to create a balanced decision boundary.")
         st.latex(r"x_{new} = x_i + \lambda (x_{zi} - x_i)")
 
 # ==========================================
 # TAB 2: MODEL EVOLUTION
 # ==========================================
 with tab2:
-    st.header("Model Evolution & Evaluation")
-    st.write("I designed this experiment to track the evolution of algorithms from a simple baseline to State-of-the-Art (SOTA).")
+    st.header("Algorithm Benchmarks")
+    st.write("Four models were trained and evaluated on an isolated 20% test split.")
     
     c1, c2, c3, c4 = st.columns(4)
-    c1.info("**1. Logistic Regression**\nLinear baseline model. Fast but struggles with complex non-linear patterns.")
-    c2.info("**2. Decision Tree**\nRule-based logic. Captures complexity but is highly prone to overfitting the training data.")
-    c3.info("**3. Random Forest**\nAn Ensemble method. Builds hundreds of trees to prevent overfitting and increase precision.")
-    c4.success("**4. XGBoost (SOTA)**\nExtreme Gradient Boosting. It builds trees sequentially, where each new tree specifically focuses on correcting the errors of the previous tree. The industry standard.")
+    c1.info("**Logistic Regression**\nStandard linear baseline for binary classification.")
+    c2.info("**Decision Tree**\nNon-linear baseline, useful for identifying simple decision rules but prone to overfitting.")
+    c3.info("**Random Forest**\nEnsemble approach utilizing bagging to reduce variance and improve generalization.")
+    c4.success("**XGBoost**\nGradient boosting framework that builds sequential trees to minimize residual errors. Generally considered SOTA for tabular data.")
 
     st.markdown("---")
     col_eval1, col_eval2 = st.columns([1.2, 1])
     with col_eval1:
-        st.subheader("Performance Metrics (Unseen Test Data)")
+        st.subheader("Test Set Metrics")
         metrics_df = pd.DataFrame(metrics_dict).T.reset_index()
         metrics_df.rename(columns={'index': 'Model'}, inplace=True)
         st.dataframe(metrics_df.style.highlight_max(subset=['Recall', 'F1_Score', 'Accuracy'], color='lightgreen', axis=0), use_container_width=True)
+        st.caption("Note: In fraud detection, Recall is prioritized to minimize the financial cost of false negatives.")
     with col_eval2:
-        st.subheader("ROC Curve & AUC")
+        st.subheader("ROC-AUC Curves")
         fig_roc = go.Figure()
-        fig_roc.add_shape(type='line', line=dict(dash='dash', color='white'), x0=0, x1=1, y0=0, y1=1)
+        fig_roc.add_shape(type='line', line=dict(dash='dash', color='gray'), x0=0, x1=1, y0=0, y1=1)
         for name in models.keys():
             fig_roc.add_trace(go.Scatter(x=roc_data[name]['fpr'], y=roc_data[name]['tpr'], mode='lines', name=f"{name} (AUC = {roc_data[name]['auc']:.3f})"))
         fig_roc.update_layout(xaxis_title='False Positive Rate', yaxis_title='True Positive Rate', height=300, margin=dict(l=0,r=0,b=0,t=0))
@@ -133,32 +134,32 @@ with tab2:
 # TAB 3: FEATURE IMPORTANCE
 # ==========================================
 with tab3:
-    st.header("Inside the AI: Feature Importance")
-    st.write("Black-box AI is unacceptable in banking. Here, we crack open the **XGBoost** and **Random Forest** brains to see exactly which PCA vectors they use to catch thieves.")
+    st.header("Model Interpretability")
+    st.write("Analyzing which PCA components drive the model's predictions.")
     
-    selected_fi_model = st.radio("Select Model to Audit:", ["XGBoost", "Random Forest"])
+    selected_fi_model = st.radio("Select Model:", ["XGBoost", "Random Forest"], horizontal=True)
     
     model = models[selected_fi_model]
     importances = model.feature_importances_
     fi_df = pd.DataFrame({'Feature': feature_names, 'Importance': importances})
-    fi_df = fi_df.sort_values(by='Importance', ascending=False).head(15) # Top 15
+    fi_df = fi_df.sort_values(by='Importance', ascending=False).head(15)
     
     fig_fi = px.bar(fi_df, x='Importance', y='Feature', orientation='h', 
-                    title=f"Top 15 Most Critical Features ({selected_fi_model})",
+                    title=f"Top 15 Features by Importance ({selected_fi_model})",
                     color='Importance', color_continuous_scale='viridis')
     fig_fi.update_layout(yaxis={'categoryorder':'total ascending'}, height=500)
     st.plotly_chart(fig_fi, use_container_width=True)
     
-    st.info("💡 **Insight:** Notice how features like `V14` and `V4` consistently rank at the top across models. In the pre-PCA world, these were likely highly indicative behaviors like 'Distance from Home' or 'Transaction Velocity'.")
+    st.caption("Components like V14 and V4 show strong predictive power across ensemble models. In production, mapping these back to raw feature groups aids in risk policy formulation.")
 
 # ==========================================
-# TAB 4: BUSINESS IMPACT (ROI & ERRORS)
+# TAB 4: BUSINESS IMPACT
 # ==========================================
 with tab4:
-    st.header("Financial Impact & Error Investigation")
-    st.write("We process a batch of **10,000 transactions** to calculate the real-world financial ROI of deploying this model.")
+    st.header("Financial ROI & Error Analysis")
+    st.write("Simulating model performance on a batch of 10,000 transactions (including all known fraud cases) to evaluate business impact.")
     
-    selected_model_name = st.selectbox("Select AI Engine to Deploy:", list(models.keys()))
+    selected_model_name = st.selectbox("Select Model for Inference:", list(models.keys()))
     
     model = models[selected_model_name]
     X_batch = batch_df.drop(['Class', 'Time'], axis=1, errors='ignore')[feature_names]
@@ -176,45 +177,49 @@ with tab4:
         (results_df['Class'] == 1) & (results_df['AI Prediction'] == 0), # FN
         (results_df['Class'] == 0) & (results_df['AI Prediction'] == 0)  # TN
     ]
-    choices = ['True Positive ✅', 'False Positive ⚠️', 'False Negative 🚨', 'True Negative ✔️']
+    choices = ['True Positive (Caught)', 'False Positive (False Alarm)', 'False Negative (Missed Fraud)', 'True Negative (Cleared)']
     results_df['Outcome'] = np.select(conditions, choices, default='Unknown')
     
-    # Financial Math
-    caught_fraud_df = results_df[results_df['Outcome'] == 'True Positive ✅']
-    missed_fraud_df = results_df[results_df['Outcome'] == 'False Negative 🚨']
+    caught_fraud_df = results_df[results_df['Outcome'] == 'True Positive (Caught)']
+    missed_fraud_df = results_df[results_df['Outcome'] == 'False Negative (Missed Fraud)']
     
     money_saved = caught_fraud_df['Amount'].sum()
     money_lost = missed_fraud_df['Amount'].sum()
     
     st.markdown("---")
-    st.subheader("💰 Return on Investment (ROI)")
+    st.subheader("Simulated Business Metrics")
     r1, r2, r3 = st.columns(3)
-    r1.metric("Total Fraud Prevented (Money Saved)", f"${money_saved:,.2f}", delta="Profit", delta_color="normal")
-    r2.metric("Total Fraud Missed (Money Lost)", f"${money_lost:,.2f}", delta="Loss", delta_color="inverse")
-    r3.metric("Fraud Catch Rate", f"{(len(caught_fraud_df)/(len(caught_fraud_df)+len(missed_fraud_df)))*100:.1f}%")
+    r1.metric("Fraud Prevented (Savings)", f"${money_saved:,.2f}")
+    r2.metric("Fraud Missed (Losses)", f"${money_lost:,.2f}")
+    
+    catch_rate = (len(caught_fraud_df)/(len(caught_fraud_df)+len(missed_fraud_df)))*100 if (len(caught_fraud_df)+len(missed_fraud_df)) > 0 else 0
+    r3.metric("Fraud Detection Rate", f"{catch_rate:.1f}%")
 
     st.markdown("---")
-    st.subheader("The Confusion Matrix")
-    cm_array = np.array([
-        [(results_df['Outcome'] == 'True Negative ✔️').sum(), (results_df['Outcome'] == 'False Positive ⚠️').sum()],
-        [(results_df['Outcome'] == 'False Negative 🚨').sum(), (results_df['Outcome'] == 'True Positive ✅').sum()]
-    ])
-    fig_cm = px.imshow(cm_array, text_auto=True, color_continuous_scale='Blues', aspect='auto',
-                       labels=dict(x="AI Prediction", y="True Reality"),
-                       x=['Predicted Legit', 'Predicted Fraud'],
-                       y=['Actually Legit', 'Actually Fraud'])
-    fig_cm.update_layout(height=300, margin=dict(l=0, r=0, t=30, b=0))
-    st.plotly_chart(fig_cm, use_container_width=True)
+    col_cm, col_grid = st.columns([1, 2])
     
-    st.markdown("---")
-    st.subheader("Deep Error Investigation Grid")
-    filter_choice = st.radio("Isolate Outcomes:", ["All Data", "True Positive ✅", "False Negative 🚨", "False Positive ⚠️"])
-    
-    display_df = results_df if filter_choice == "All Data" else results_df[results_df['Outcome'] == filter_choice]
-    
-    def highlight(val):
-        if '🚨' in val: return 'background-color: #ff4b4b; color: white'
-        if '⚠️' in val: return 'background-color: #ffa421; color: black'
-        if '✅' in val: return 'background-color: #00CC96; color: white'
-        return ''
-    st.dataframe(display_df.style.map(highlight, subset=['Outcome']), use_container_width=True, height=300)
+    with col_cm:
+        st.subheader("Confusion Matrix")
+        cm_array = np.array([
+            [(results_df['Outcome'] == 'True Negative (Cleared)').sum(), (results_df['Outcome'] == 'False Positive (False Alarm)').sum()],
+            [(results_df['Outcome'] == 'False Negative (Missed Fraud)').sum(), (results_df['Outcome'] == 'True Positive (Caught)').sum()]
+        ])
+        fig_cm = px.imshow(cm_array, text_auto=True, color_continuous_scale='Blues', aspect='auto',
+                           labels=dict(x="Predicted Label", y="True Label"),
+                           x=['Legit', 'Fraud'],
+                           y=['Legit', 'Fraud'])
+        fig_cm.update_layout(height=300, margin=dict(l=0, r=0, t=30, b=0))
+        st.plotly_chart(fig_cm, use_container_width=True)
+        
+    with col_grid:
+        st.subheader("Transaction Log")
+        filter_choice = st.selectbox("Filter by Outcome:", ["All", "True Positive (Caught)", "False Negative (Missed Fraud)", "False Positive (False Alarm)"])
+        
+        display_df = results_df if filter_choice == "All" else results_df[results_df['Outcome'] == filter_choice]
+        
+        def highlight(val):
+            if 'Missed' in val: return 'background-color: #ff4b4b; color: white'
+            if 'False Alarm' in val: return 'background-color: #ffa421; color: black'
+            if 'Caught' in val: return 'background-color: #00CC96; color: white'
+            return ''
+        st.dataframe(display_df.style.map(highlight, subset=['Outcome']), use_container_width=True, height=300)
