@@ -1,27 +1,36 @@
-# 🛡️ Real-Time Fraud Detection Gateway
+# 🛡️ Enterprise Fraud Detection Gateway
 
-A live, public-facing dashboard simulating an enterprise Machine Learning pipeline. It evaluates credit card transactions in real-time, detecting anomalies and visualizing the data stream.
+**Architected by Vivek (@bravo2024)**
 
-## 🌟 Features
-- **Live Stream Simulation:** Generates synthetic transactions continuously.
-- **Real-Time Inference:** Uses a Machine Learning model (Random Forest) to classify transactions as legitimate or fraudulent instantly.
-- **Dynamic Dashboard:** Built entirely in Streamlit with auto-updating metrics, live data tables, and interactive Plotly charts.
-- **Ready for Streamlit Cloud:** Easily deployable to the public without requiring a VPS or complex backend architecture.
+An end-to-end Machine Learning pipeline designed to evaluate highly imbalanced credit card transactions in real-time. This project moves beyond simple predictive modeling to incorporate **Enterprise MLOps** and **Business Logic Tuning**, simulating a true banking environment.
 
-## 🚀 How to Run Locally
+## 🚀 Live Application
+View the interactive dashboard here: **[Link to your deployed Streamlit app]**
 
-1. **Install Dependencies:**
-   ```bash
-   pip install -r requirements.txt
-   ```
+## 🧠 Core Engineering Architecture
 
-2. **Run the Dashboard:**
-   ```bash
-   streamlit run app.py
-   ```
+### 1. The Imbalance Problem (SMOTE)
+Real-world fraud is extremely rare (0.17% in this dataset). Naive models simply learn to predict "Legitimate" 100% of the time to achieve high accuracy. 
+*   **My Solution:** I engineered a preprocessing pipeline utilizing **SMOTE** (Synthetic Minority Over-sampling Technique) to mathematically generate synthetic fraudulent vectors during training. This forces the algorithms to establish a proper decision boundary.
 
-## 🧠 ML Pipeline (For the Developer)
-The `ml/` directory contains the training scripts. The model is trained on the Kaggle Credit Card Fraud dataset, utilizing **SMOTE** to handle extreme class imbalances (99.8% legitimate vs 0.2% fraud).
+### 2. Multi-Algorithm Benchmarking
+I trained and benchmarked three distinct architectures:
+*   **Logistic Regression:** Fast, interpretable baseline.
+*   **Decision Tree:** Rule-based logic capable of capturing non-linear relationships.
+*   **Random Forest:** An ensemble method that provided the most robust resistance to overfitting.
+*   *Note: In this domain, I optimized for **Recall** over Accuracy, as the business cost of missing fraud (False Negative) is exponentially higher than a false alarm.*
+
+### 3. Dynamic Business Threshold Tuning
+AI does not output binary "Yes/No" answers; it outputs probabilities. The dashboard includes an interactive **Decision Threshold Slider**.
+*   This demonstrates my understanding of the **Precision-Recall Tradeoff**. 
+*   Users can manipulate the threshold to see exactly how moving the slider impacts "Customer Friction" (blocking innocent people) versus "Business Risk" (letting thieves through).
+
+## 🛠️ Tech Stack
+*   **Language:** Python 3
+*   **Machine Learning:** Scikit-Learn, Imbalanced-Learn (SMOTE)
+*   **Data Processing:** Pandas, NumPy
+*   **Visualization:** Streamlit, Plotly
+*   **Data Security:** PCA (Principal Component Analysis) to ensure GDPR/banking compliance.
 
 ---
-*Built with precision.*
+*Developed as a portfolio piece to demonstrate applied Machine Learning Engineering.*
