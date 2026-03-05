@@ -218,7 +218,9 @@ with tab3:
         probs = model.predict_proba(X_batch_scaled)[:, 1]
         preds = model.predict(X_batch_scaled)
         
-        results_df = batch_df[['Time', 'Amount', 'Class']].copy()
+        results_df = batch_df[['Amount', 'Class']].copy()
+        # Add a mock Transaction ID for display purposes
+        results_df.insert(0, 'Transaction_ID', ['TXN-' + str(i).zfill(5) for i in range(len(results_df))])
         results_df['Fraud Probability'] = np.round(probs * 100, 2).astype(str) + "%"
         results_df['AI Prediction'] = preds
         
