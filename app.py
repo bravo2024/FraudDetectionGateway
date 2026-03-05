@@ -39,11 +39,9 @@ def load_ml_components():
 
 @st.cache_data
 def generate_evaluation_data(_df_full, _scaler, _features, _models):
-    # Recreate the test set to generate ROC and Confusion Matrices live
     X = _df_full.drop(['Class', 'Time'], axis=1, errors='ignore')[_features]
     y = _df_full['Class'].astype(int)
     
-    # We only need a sample for fast visualization if the dataset is huge, but 284k split is fast enough
     _, X_test, _, y_test = train_test_split(X, y, test_size=0.2, random_state=42, stratify=y)
     X_test_scaled = _scaler.transform(X_test)
     
@@ -51,32 +49,39 @@ def generate_evaluation_data(_df_full, _scaler, _features, _models):
     cm_data = {}
     
     for name, model in _models.items():
-        # Predict Probabilities for ROC
         y_probs = model.predict_proba(X_test_scaled)[:, 1]
         fpr, tpr, _ = roc_curve(y_test, y_probs)
         roc_auc = auc(fpr, tpr)
         roc_data[name] = {'fpr': fpr, 'tpr': tpr, 'auc': roc_auc}
         
-        # Predict Classes for Confusion Matrix
         y_pred = model.predict(X_test_scaled)
         cm_data[name] = confusion_matrix(y_test, y_pred)
         
     return roc_data, cm_data, y_test
 
+@st.cache_data
+def get_batch_data(df):
+    # To prevent browser crash, we take all 492 frauds + 9508 random legitimate = 10,000 rows
+    frauds = df[df['Class'] == 1]
+    legits = df[df['Class'] == 0].sample(n=9508, random_state=42)
+    batch = pd.concat([frauds, legits]).sample(frac=1, random_state=42).reset_index(drop=True)
+    return batch
+
 df_full = load_sample_data()
 correlations = compute_correlations(df_full)
 scaler, feature_names, metrics_dict, models = load_ml_components()
 roc_data, cm_data, y_test_true = generate_evaluation_data(df_full, scaler, feature_names, models)
+batch_df = get_batch_data(df_full)
 
 # --- UI HEADER ---
 st.title("🎓 Machine Learning Concepts: Fraud Detection")
 st.markdown("""
 *An academic and technical demonstration of Machine Learning concepts, engineered by Vivek (@bravo2024).*  
-*Designed to showcase the mathematical theory, loss functions, and evaluation metrics behind enterprise AI.*
+*Designed to showcase the mathematical theory, loss functions, and dataset classification results.*
 """)
 
 # --- TABS ---
-tab1, tab2, tab3 = st.tabs(["📊 Data & Mathematical Theory", "🧠 Algorithms & Evaluation", "🎚️ Live Inference Engine"])
+tab1, tab2, tab3 = st.tabs(["📊 Data & Mathematical Theory", "🧠 Algorithms & Evaluation", "🗄️ Batch Inference & Error Analysis"])
 
 # ==========================================
 # TAB 1: DATA & MATHEMATICAL ANALYSIS
@@ -135,7 +140,7 @@ with tab1:
         st.plotly_chart(fig_scatter, use_container_width=True)
 
 # ==========================================
-# TAB 2: ALGORITHMS & EVALUATION (STUDENT FOCUS)
+# TAB 2: ALGORITHMS & EVALUATION
 # ==========================================
 with tab2:
     st.header("1. The Algorithms & Their Loss Functions")
@@ -193,96 +198,87 @@ with tab2:
     st.success("🏆 **The Verdict:** **Random Forest** is the superior model for this architecture. While Logistic Regression had slightly higher baseline recall due to SMOTE, Random Forest achieved a vastly superior **F1-Score** and **Precision**, meaning it catches fraud without accidentally blocking thousands of innocent customers.")
 
 # ==========================================
-# TAB 3: INTERACTIVE INFERENCE & THRESHOLD TUNING
+# TAB 3: BATCH INFERENCE & ERROR ANALYSIS
 # ==========================================
 with tab3:
-    st.header("Live Inference Engine & Business Logic")
-    st.write("See the models in action. Adjust the Decision Threshold to see the **Precision-Recall Tradeoff** happening in real-time.")
+    st.header("Batch Inference & Error Analysis")
+    st.write("""
+    Instead of a live simulator, let's look at the hard data. I have loaded a test batch of **10,000 transactions** (including all 492 known frauds). 
+    We will run the entire batch through the AI models and analyze exactly where the models succeed and where they fail.
+    """)
     
-    col_ctrl, col_result = st.columns([1, 1.5])
+    col_ctrl, col_metric = st.columns([1, 2])
     
     with col_ctrl:
-        st.subheader("Engine Controls")
-        selected_model_name = st.selectbox("1. Select AI Engine:", list(models.keys()))
+        selected_model_name = st.selectbox("1. Select AI Engine to Process Batch:", list(models.keys()))
         
-        st.markdown("---")
-        st.write("**2. Set Business Risk Threshold**")
-        threshold = st.slider(
-            "Fraud Probability Cutoff (%)", 
-            min_value=1, max_value=99, value=50, step=1,
-            help="If the AI's confidence is above this number, it blocks the transaction."
-        )
+        st.write("2. Filter the Results Table:")
+        filter_choice = st.radio("Show me:", [
+            "All 10,000 Transactions", 
+            "Caught Fraud (True Positives) ✅", 
+            "Missed Fraud (False Negatives) 🚨", 
+            "False Alarms (False Positives) ⚠️"
+        ])
         
-        if threshold < 30:
-            st.warning("⚠️ **High Friction:** Catching all fraud, but blocking many innocent customers.")
-        elif threshold > 80:
-            st.error("🚨 **High Risk:** Very low customer friction, but sophisticated fraud will slip through.")
-        else:
-            st.success("⚖️ **Balanced:** Standard enterprise operating zone.")
-            
-        st.markdown("---")
-        transaction_type = st.radio("3. Inject Historical Transaction Type:", ["Legitimate", "Fraudulent"])
+    # --- PROCESS BATCH ---
+    model = models[selected_model_name]
+    X_batch = batch_df.drop(['Class', 'Time'], axis=1, errors='ignore')[feature_names]
+    X_batch_scaled = scaler.transform(X_batch)
+    
+    probs = model.predict_proba(X_batch_scaled)[:, 1]
+    preds = model.predict(X_batch_scaled)
+    
+    results_df = batch_df[['Time', 'Amount', 'Class']].copy()
+    results_df['Fraud Probability'] = np.round(probs * 100, 2).astype(str) + "%"
+    results_df['AI Prediction'] = preds
+    
+    # Classify Outcomes
+    conditions = [
+        (results_df['Class'] == 1) & (results_df['AI Prediction'] == 1), # TP
+        (results_df['Class'] == 0) & (results_df['AI Prediction'] == 1), # FP
+        (results_df['Class'] == 1) & (results_df['AI Prediction'] == 0), # FN
+        (results_df['Class'] == 0) & (results_df['AI Prediction'] == 0)  # TN
+    ]
+    choices = [
+        'Caught Fraud (True Positives) ✅', 
+        'False Alarms (False Positives) ⚠️', 
+        'Missed Fraud (False Negatives) 🚨', 
+        'Correctly Cleared (True Negatives) ✔️'
+    ]
+    results_df['Outcome'] = np.select(conditions, choices, default='Unknown')
+    
+    # Calculate counts
+    tp_count = (results_df['Outcome'] == choices[0]).sum()
+    fp_count = (results_df['Outcome'] == choices[1]).sum()
+    fn_count = (results_df['Outcome'] == choices[2]).sum()
+    tn_count = (results_df['Outcome'] == choices[3]).sum()
+    
+    with col_metric:
+        st.subheader(f"Batch Processing Results ({selected_model_name})")
+        m1, m2, m3, m4 = st.columns(4)
+        m1.metric("Caught Fraud (TP)", tp_count)
+        m2.metric("Missed Fraud (FN)", fn_count, delta="Risk", delta_color="inverse")
+        m3.metric("False Alarms (FP)", fp_count, delta="Friction", delta_color="inverse")
+        m4.metric("Cleared (TN)", tn_count)
         
-        if st.button("🚀 Execute Inference", type="primary"):
-            target_class = 1 if transaction_type == "Fraudulent" else 0
-            subset = df_full[df_full['Class'] == target_class]
-            random_idx = np.random.randint(0, len(subset))
-            st.session_state['selected_row'] = subset.iloc[random_idx:random_idx+1]
-            
-    with col_result:
-        if 'selected_row' in st.session_state:
-            row = st.session_state['selected_row']
-            true_class = row['Class'].values[0]
-            true_label = "🚨 FRAUD" if true_class == 1 else "✅ LEGITIMATE"
-            
-            st.markdown("### 📡 Transaction Payload Intercepted")
-            st.write(f"**True Ground Truth:** {true_label}")
-            st.write(f"**Transaction Amount:** ${row['Amount'].values[0]:.2f}")
-            
-            X_input = row.drop(['Class', 'Time'], axis=1, errors='ignore')[feature_names]
-            X_scaled = scaler.transform(X_input)
-            
-            model = models[selected_model_name]
-            probabilities = model.predict_proba(X_scaled)[0]
-            
-            fraud_prob = probabilities[1] * 100
-            is_blocked = fraud_prob >= threshold
-            
-            st.markdown("---")
-            st.markdown("### 🧠 AI Evaluation & Business Logic")
-            
-            fig_gauge = go.Figure(go.Indicator(
-                mode = "gauge+number",
-                value = fraud_prob,
-                domain = {'x': [0, 1], 'y': [0, 1]},
-                title = {'text': f"{selected_model_name} Fraud Probability"},
-                gauge = {
-                    'axis': {'range': [None, 100]},
-                    'bar': {'color': "darkred"},
-                    'steps': [
-                        {'range': [0, threshold], 'color': "lightgreen"},
-                        {'range': [threshold, 100], 'color': "salmon"}
-                    ],
-                    'threshold': {
-                        'line': {'color': "black", 'width': 4},
-                        'thickness': 0.75,
-                        'value': threshold
-                    }
-                }
-            ))
-            fig_gauge.update_layout(height=250, margin=dict(l=20, r=20, t=30, b=20))
-            st.plotly_chart(fig_gauge, use_container_width=True)
-            
-            if is_blocked:
-                if true_class == 1:
-                    st.success(f"🛡️ **ACTION: BLOCKED** (Correctly stopped fraud!)")
-                else:
-                    st.error(f"⚠️ **ACTION: BLOCKED** (False Positive! You just blocked an innocent customer.)")
-            else:
-                if true_class == 0:
-                    st.success(f"✅ **ACTION: APPROVED** (Correctly allowed legitimate swipe.)")
-                else:
-                    st.error(f"🚨 **ACTION: APPROVED** (False Negative! A thief just stole the money!)")
-                    
-        else:
-            st.info("Configure the engine and click 'Execute Inference' to begin.")
+    st.markdown("---")
+    st.subheader("Data Grid: Transaction Evaluation")
+    
+    # Filter DataFrame
+    if filter_choice != "All 10,000 Transactions":
+        display_df = results_df[results_df['Outcome'] == filter_choice]
+    else:
+        display_df = results_df
+        
+    # Styling to make it look professional
+    def highlight_errors(val):
+        if '🚨' in val:
+            return 'background-color: #ff4b4b; color: white'
+        elif '⚠️' in val:
+            return 'background-color: #ffa421; color: black'
+        elif '✅' in val:
+            return 'background-color: #00CC96; color: white'
+        return ''
+
+    styled_df = display_df.style.map(highlight_errors, subset=['Outcome'])
+    st.dataframe(styled_df, use_container_width=True, height=400)
