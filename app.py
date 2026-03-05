@@ -73,11 +73,12 @@ An evaluation of various machine learning models for detecting fraudulent transa
 """)
 
 # --- TABS ---
-tab1, tab2, tab3, tab4 = st.tabs([
+tab1, tab2, tab3, tab4, tab5 = st.tabs([
     "Dataset & Preprocessing", 
     "Model Benchmarks", 
     "Feature Interpretability",
-    "Financial Impact Analysis"
+    "Financial Impact Analysis",
+    "Industry Context"
 ])
 
 # ==========================================
@@ -223,3 +224,33 @@ with tab4:
             if 'Caught' in val: return 'background-color: #00CC96; color: white'
             return ''
         st.dataframe(display_df.style.map(highlight, subset=['Outcome']), use_container_width=True, height=300)
+
+# ==========================================
+# TAB 5: INDUSTRY CONTEXT
+# ==========================================
+with tab5:
+    st.header("Real-World Architecture vs. Kaggle Benchmarks")
+    st.write("While XGBoost represents the State-of-the-Art (SOTA) for tabular datasets like this Kaggle challenge, modern financial institutions employ multi-layered, hybrid architectures to combat sophisticated, evolving fraud rings.")
+    
+    st.markdown("### The Modern Banking AI Stack")
+    
+    c1, c2 = st.columns(2)
+    with c1:
+        st.markdown("""
+        **1. The Rules Engine (Layer 1)**
+        Before hitting any ML model, transactions pass through hardcoded business rules (e.g., *'Block if purchase > $5,000 outside home country'*). This filters obvious anomalies instantly with zero compute cost.
+        
+        **2. XGBoost / LightGBM (Layer 2)**
+        The core predictive engine. The model built in this experiment (XGBoost) is exactly what sits at Layer 2 in institutions like Visa or Mastercard. It evaluates historical tabular data in milliseconds.
+        """)
+        
+    with c2:
+        st.markdown("""
+        **3. Graph Neural Networks (GNNs) (Layer 3)**
+        Used by companies like Stripe or PayPal. Instead of looking at isolated rows, GNNs map relationships. If Account A sends money to Merchant B, who shares an IP address with Scammer C, the GNN flags the entire network.
+        
+        **4. Autoencoders (Unsupervised Deep Learning)**
+        Supervised models (like Random Forest) only catch fraud they have seen before. Banks use Autoencoders to detect *Zero-Day Fraud*—brand new techniques. It learns what 'normal' behavior looks like and flags anything mathematically alien.
+        """)
+        
+    st.info("**Why the discrepancy?** Public datasets (like this one) provide isolated, static rows to protect privacy. Real-world systems ingest relational data (IPs, geolocations, device fingerprints) continuously, requiring the hybrid GNN/Boosting architecture described above.")
