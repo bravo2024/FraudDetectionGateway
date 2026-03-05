@@ -3,6 +3,7 @@ from sklearn.model_selection import train_test_split
 from sklearn.linear_model import LogisticRegression
 from sklearn.tree import DecisionTreeClassifier
 from sklearn.ensemble import RandomForestClassifier
+from xgboost import XGBClassifier
 from sklearn.preprocessing import StandardScaler
 from sklearn.metrics import accuracy_score, precision_score, recall_score, f1_score
 from imblearn.over_sampling import SMOTE
@@ -28,9 +29,10 @@ def train_models():
     X_train_res, y_train_res = smote.fit_resample(X_train, y_train)
     
     models = {
-        "Logistic Regression": LogisticRegression(max_iter=1000),
+        "Logistic Regression": LogisticRegression(max_iter=1000, n_jobs=-1),
         "Decision Tree": DecisionTreeClassifier(max_depth=10, random_state=42),
-        "Random Forest": RandomForestClassifier(n_estimators=30, max_depth=10, random_state=42, n_jobs=-1)
+        "Random Forest": RandomForestClassifier(n_estimators=30, max_depth=10, random_state=42, n_jobs=-1),
+        "XGBoost": XGBClassifier(n_estimators=50, max_depth=6, random_state=42, n_jobs=-1, eval_metric='logloss')
     }
     
     os.makedirs('FraudDetectionGateway/models', exist_ok=True)

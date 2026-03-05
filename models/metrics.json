@@ -16,5 +16,11 @@
         "Precision": 0.4167,
         "Recall": 0.8673,
         "F1_Score": 0.5629
+    },
+    "XGBoost": {
+        "Accuracy": 0.9981,
+        "Precision": 0.4645,
+        "Recall": 0.8673,
+        "F1_Score": 0.605
     }
 }
