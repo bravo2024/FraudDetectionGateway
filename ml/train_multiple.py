@@ -13,16 +13,18 @@ import json
 
 def train_models():
     print("Loading dataset for multi-model training...")
-    df = pd.read_csv('FraudDetectionGateway/data/creditcard.csv')
+    df = pd.read_csv('data/creditcard.csv')
     
     X = df.drop(['Class', 'Time'], axis=1, errors='ignore') 
     y = df['Class'].astype(int)
-    
-    scaler = StandardScaler()
-    X_scaled = scaler.fit_transform(X)
-    X = pd.DataFrame(X_scaled, columns=X.columns)
 
+    # Split BEFORE scaling so the scaler's mean/std come from training rows
+    # only (fitting on the full data leaks test statistics into training).
     X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42, stratify=y)
+
+    scaler = StandardScaler()
+    X_train = pd.DataFrame(scaler.fit_transform(X_train), columns=X_train.columns)
+    X_test = pd.DataFrame(scaler.transform(X_test), columns=X_test.columns)
     
     print("Applying SMOTE to balance classes...")
     smote = SMOTE(random_state=42)
@@ -35,7 +37,7 @@ def train_models():
         "XGBoost": XGBClassifier(n_estimators=50, max_depth=6, random_state=42, n_jobs=-1, eval_metric='logloss')
     }
     
-    os.makedirs('FraudDetectionGateway/models', exist_ok=True)
+    os.makedirs('models', exist_ok=True)
     metrics = {}
     
     for name, model in models.items():
@@ -50,14 +52,14 @@ def train_models():
             "F1_Score": round(f1_score(y_test, y_pred), 4)
         }
         
-        model_filename = f"FraudDetectionGateway/models/{name.replace(' ', '_').lower()}.pkl"
+        model_filename = f"models/{name.replace(' ', '_').lower()}.pkl"
         joblib.dump(model, model_filename)
         print(f"Finished {name}. Recall: {metrics[name]['Recall']}")
         
-    joblib.dump(scaler, 'FraudDetectionGateway/models/scaler.pkl')
-    joblib.dump(list(X.columns), 'FraudDetectionGateway/models/features.pkl')
+    joblib.dump(scaler, 'models/scaler.pkl')
+    joblib.dump(list(X_train.columns), 'models/features.pkl')
     
-    with open('FraudDetectionGateway/models/metrics.json', 'w') as f:
+    with open('models/metrics.json', 'w') as f:
         json.dump(metrics, f, indent=4)
         
     print("All models trained and saved!")

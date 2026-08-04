@@ -58,8 +58,16 @@ def generate_evaluation_data(_df_full, _scaler, _features, _models):
 
 @st.cache_data
 def get_batch_data(df):
-    frauds = df[df['Class'] == 1]
-    legits = df[df['Class'] == 0].sample(n=9508, random_state=42)
+    # Score the business-impact batch on the HELD-OUT TEST portion only.
+    # Sampling from the full frame (train+test) would let the ROI figures
+    # include transactions the models were trained on.
+    X = df.drop(['Class', 'Time'], axis=1, errors='ignore')
+    y = df['Class'].astype(int)
+    _, X_test, _, _ = train_test_split(X, y, test_size=0.2, random_state=42, stratify=y)
+    test_df = df.loc[X_test.index]
+    frauds = test_df[test_df['Class'] == 1]
+    n_legit = min(9508, int((test_df['Class'] == 0).sum()))
+    legits = test_df[test_df['Class'] == 0].sample(n=n_legit, random_state=42)
     batch = pd.concat([frauds, legits]).sample(frac=1, random_state=42).reset_index(drop=True)
     return batch
 

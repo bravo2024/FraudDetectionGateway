@@ -10,7 +10,7 @@ import os
 def train_model():
     print("Starting ML Training Pipeline...")
     
-    data_path = 'FraudDetectionGateway/data/creditcard.csv'
+    data_path = 'data/creditcard.csv'
     
     if not os.path.exists(data_path):
         print("Error: Dataset not found at " + data_path)
@@ -31,12 +31,16 @@ def train_model():
         X = X.drop(['Time'], axis=1)
         
     y = df['Class']
-    
-    scaler = StandardScaler()
-    X_scaled = scaler.fit_transform(X)
-    X = pd.DataFrame(X_scaled, columns=X.columns)
 
+    # Split BEFORE scaling. Fitting the scaler on the full dataset lets the
+    # test set's mean/std leak into training features — the classic
+    # preprocessing-before-split error. The scaler must learn statistics from
+    # the training split only.
     X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42, stratify=y)
+
+    scaler = StandardScaler()
+    X_train = pd.DataFrame(scaler.fit_transform(X_train), columns=X_train.columns)
+    X_test = pd.DataFrame(scaler.transform(X_test), columns=X_test.columns)
     
     print("Applying SMOTE to balance the classes in training data (this may take a moment)...")
     smote = SMOTE(random_state=42)
@@ -54,10 +58,10 @@ def train_model():
     print(classification_report(y_test, y_pred))
     
     # Save Model and Scaler
-    os.makedirs('FraudDetectionGateway/models', exist_ok=True)
-    joblib.dump(model, 'FraudDetectionGateway/models/fraud_model.pkl')
-    joblib.dump(scaler, 'FraudDetectionGateway/models/scaler.pkl')
-    joblib.dump(list(X.columns), 'FraudDetectionGateway/models/features.pkl')
+    os.makedirs('models', exist_ok=True)
+    joblib.dump(model, 'models/fraud_model.pkl')
+    joblib.dump(scaler, 'models/scaler.pkl')
+    joblib.dump(list(X_train.columns), 'models/features.pkl')
     
     print("Model successfully saved!")
 
